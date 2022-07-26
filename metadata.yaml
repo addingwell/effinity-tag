@@ -1,0 +1,5 @@
+homepage: "https://www.addingwell.com"
+documentation: "https://github.com/addingwell/effinity-tag/blob/master/README.md"
+versions:
+  - sha: 1189a2f87c0e23c8c58e7a3f1746c17b25553fc4
+    changeNotes: Initial release.
