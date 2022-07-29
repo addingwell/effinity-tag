@@ -100,6 +100,13 @@ ___TEMPLATE_PARAMETERS___
         "displayName": "Consent",
         "simpleValueType": true,
         "help": "1 when the user consent that their data is used for performance analytics, 0 otherwise"
+      },
+      {
+        "type": "TEXT",
+        "name": "attrib",
+        "displayName": "Attribution",
+        "simpleValueType": true,
+        "help": "1 when Effinity is the last touchpoint, 2 when Effinity intervened but isn't last, 0 if Effinity didn't intervene."
       }
     ]
   },
@@ -343,6 +350,7 @@ switch (eventModel.event_name) {
       urlParams.push('montant=' + encodeUri(data.purchaseAmount ? data.purchaseAmount : eventModel.value));
       urlParams.push('monnaie=' + encodeUri(data.currency ? data.currency : eventModel.currency));
       urlParams.push(data.newCustomer !== undefined ? 'newcustomer=' + encodeUri(data.newCustomer) : '');
+      urlParams.push(data.attribution !== undefined ? 'attrib=' + encodeUri(data.attribution) : '');
       urlParams.push(
         data.voucher !== undefined || eventModel.coupon !== undefined ?
           'voucher=' + encodeUri(data.voucher !== undefined ? data.voucher : eventModel.coupon) :
