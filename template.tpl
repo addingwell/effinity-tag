@@ -350,7 +350,7 @@ switch (eventModel.event_name) {
       urlParams.push('montant=' + encodeUri(data.purchaseAmount ? data.purchaseAmount : eventModel.value));
       urlParams.push('monnaie=' + encodeUri(data.currency ? data.currency : eventModel.currency));
       urlParams.push(data.newCustomer !== undefined ? 'newcustomer=' + encodeUri(data.newCustomer) : '');
-      urlParams.push(data.attribution !== undefined ? 'attrib=' + encodeUri(data.attribution) : '');
+      urlParams.push(data.attrib !== undefined ? 'attrib=' + encodeUri(data.attrib) : '');
       urlParams.push(
         data.voucher !== undefined || eventModel.coupon !== undefined ?
           'voucher=' + encodeUri(data.voucher !== undefined ? data.voucher : eventModel.coupon) :
