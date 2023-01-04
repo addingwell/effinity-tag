@@ -3,8 +3,7 @@ documentation: "https://github.com/addingwell/effinity-tag/blob/master/README.md
 versions:
   - sha: a553c03e096f773f01f6fa4c2073324aceb75b25
     changeNotes: Fix: Don't send id_compteur when empty (and fix attrib parameter)
-
-  - sha: 1189a2f87c0e23c8c58e7a3f1746c17b25553fc4
-    changeNotes: Initial release.
   - sha: 6a686200e9a38e2d0265e79498466c22ed44e837
     changeNotes: Add attribution parameter.
+  - sha: 1189a2f87c0e23c8c58e7a3f1746c17b25553fc4
+    changeNotes: Initial release.
