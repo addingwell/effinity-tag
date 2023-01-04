@@ -337,7 +337,7 @@ switch (eventModel.event_name) {
     const urlParams = [
       'id=' + data.customerId,
 
-      'id_compteur=' + editorId,
+      editorId ? 'id_compteur=' + editorId : '',
       subId1 ? 'effi_id=' + subId1 : '',
       subId2 ? 'effi_id2=' + subId2 : '',
       effiProductId ? 'prod_id=' + effiProductId : '',
