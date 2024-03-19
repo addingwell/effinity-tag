@@ -349,7 +349,7 @@ switch (eventModel.event_name) {
     if (eventModel.event_name === PURCHASE_EVENT) {
       urlParams.push('montant=' + encodeUri(data.purchaseAmount ? data.purchaseAmount : eventModel.value));
       urlParams.push('monnaie=' + encodeUri(data.currency ? data.currency : eventModel.currency));
-      urlParams.push(data.newCustomer !== undefined ? 'newcustomer=' + encodeUri(data.newCustomer) : '');
+      urlParams.push(data.newCustomer !== undefined ? 'newcustomer=' + data.newCustomer : '');
       urlParams.push(data.attrib !== undefined ? 'attrib=' + encodeUri(data.attrib) : '');
       urlParams.push(
         data.voucher !== undefined || eventModel.coupon !== undefined ?
