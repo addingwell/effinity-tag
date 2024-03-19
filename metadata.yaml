@@ -1,6 +1,9 @@
 homepage: "https://www.addingwell.com"
 documentation: "https://github.com/addingwell/effinity-tag/blob/master/README.md"
 versions:
+  - sha: 759d084ca6a21a2b5bd64f080eaf8940d296d212
+    changeNotes: Fix newCustomer Issue
+
   - sha: a553c03e096f773f01f6fa4c2073324aceb75b25
     changeNotes: "Fix: Don't send id_compteur when empty (and fix attrib parameter)"
   - sha: 6a686200e9a38e2d0265e79498466c22ed44e837
