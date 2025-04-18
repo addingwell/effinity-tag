@@ -17,7 +17,7 @@ ___INFO___
     "AFFILIATE_MARKETING",
     "ADVERTISING"
   ],
-  "displayName": "Effinity",
+  "displayName": "Effinity (Addingwell)",
   "brand": {
     "id": "brand_dummy",
     "displayName": "Addingwell",
@@ -106,7 +106,7 @@ ___TEMPLATE_PARAMETERS___
         "name": "attrib",
         "displayName": "Attribution",
         "simpleValueType": true,
-        "help": "1 when Effinity is the last touchpoint, 2 when Effinity intervened but isn't last, 0 if Effinity didn't intervene."
+        "help": "1 when Effinity is the last touchpoint, 2 when Effinity intervened but isn\u0027t last, 0 if Effinity didn\u0027t intervene."
       }
     ]
   },
@@ -257,6 +257,23 @@ ___TEMPLATE_PARAMETERS___
         ]
       }
     ]
+  },
+  {
+    "type": "GROUP",
+    "name": "cookieParameters",
+    "displayName": "Override Effinity Cookie",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "TEXT",
+        "name": "effiCookie",
+        "displayName": "effi",
+        "simpleValueType": true,
+        "help": "The \"effi\" cookie is set by this tag on \"page_view\" event when the user lands on your website with a URL query param \"eff_cpt\u003d123456\".",
+        "defaultValue": ""
+      }
+    ],
+    "help": "Your environment might block Cookies. You can override the classic cookie lecture with the data you need from your event parameters."
   }
 ]
 
@@ -269,6 +286,7 @@ const setCookie = require('setCookie');
 const getCookieValues = require('getCookieValues');
 const parseUrl = require('parseUrl');
 const encodeUriComponent = require('encodeUriComponent');
+const decodeUriComponent = require('decodeUriComponent');
 
 const eventModel = getAllEventData();
 
@@ -278,128 +296,142 @@ const GENERATE_LEAD_EVENT = data.leadEvent;
 
 
 function encodeUri(value) {
-  value = value || '';
-  return encodeUriComponent(value);
+    value = value || '';
+    return encodeUriComponent(value);
 }
 
 switch (eventModel.event_name) {
-  case PAGE_VIEW_EVENT:
-    const parsedUrl = parseUrl(eventModel.page_location);
-    const params = {};
+    case PAGE_VIEW_EVENT: {
+        const parsedUrl = parseUrl(eventModel.page_location);
+        const cookieDomain = '.' + (parsedUrl.hostname);
+        const params = {};
 
-    if (parsedUrl && parsedUrl.searchParams) {
-      for (let param in parsedUrl.searchParams) {
-        if (param.toLowerCase() === 'eff_cpt') {
-          params.editorId = parsedUrl.searchParams[param];
+        if (parsedUrl && parsedUrl.searchParams) {
+            for (let param in parsedUrl.searchParams) {
+                if (param.toLowerCase() === 'eff_cpt') {
+                    params.editorId = parsedUrl.searchParams[param];
+                }
+                if (param.toLowerCase() === 'eff_sub1') {
+                    params.sub1 = parsedUrl.searchParams[param];
+                }
+                if (param.toLowerCase() === 'eff_sub2') {
+                    params.sub2 = parsedUrl.searchParams[param];
+                }
+                if (param.toLowerCase() === 'eff_pid') {
+                    params.productId = parsedUrl.searchParams[param];
+                }
+            }
         }
-        if (param.toLowerCase() === 'eff_sub1') {
-          params.sub1 = parsedUrl.searchParams[param];
+
+        if (params.editorId) {
+            const value = [
+                params.editorId,
+                params.sub1,
+                params.sub2,
+                params.productId
+            ].join(';');
+
+            const options = {
+                domain: cookieDomain,
+                path: '/',
+                secure: true,
+                httpOnly: false,
+                sameSite: 'None',
+                'max-age': 86400 * data.cookieExpiration
+            };
+            setCookie('effi', value, options, false);
         }
-        if (param.toLowerCase() === 'eff_sub2') {
-          params.sub2 = parsedUrl.searchParams[param];
-        }
-        if (param.toLowerCase() === 'eff_pid') {
-          params.productId = parsedUrl.searchParams[param];
-        }
-      }
-    }
 
-    if (params.editorId) {
-      const value = [
-        params.editorId,
-        params.sub1,
-        params.sub2,
-        params.productId
-      ].join(';');
-
-      const options = {
-        domain: 'auto',
-        path: '/',
-        secure: true,
-        httpOnly: false,
-        'max-age': 86400 * data.cookieExpiration
-      };
-      setCookie('effi', value, options, false);
-    }
-
-    data.gtmOnSuccess();
-    break;
-  case PURCHASE_EVENT:
-  case GENERATE_LEAD_EVENT:
-    const effiCookie = getCookieValues('effi');
-
-    const cookieParams = effiCookie[0] ? effiCookie[0].split(';') : null;
-    const editorId = cookieParams ? cookieParams[0] : null;
-    const subId1 = cookieParams ? cookieParams[1] : null;
-    const subId2 = cookieParams ? cookieParams[2] : null;
-    const effiProductId = cookieParams ? cookieParams[3] : null;
-
-    const urlParams = [
-      'id=' + data.customerId,
-
-      editorId ? 'id_compteur=' + editorId : '',
-      subId1 ? 'effi_id=' + subId1 : '',
-      subId2 ? 'effi_id2=' + subId2 : '',
-      effiProductId ? 'prod_id=' + effiProductId : '',
-      
-      'ref=' + encodeUri(data.transactionId !== undefined ? data.transactionId : eventModel.transaction_id),
-      data.consentPerformance !== undefined ? 'consent_performance=' + encodeUri(data.consentPerformance) : '',
-    ];
-
-    if (eventModel.event_name === PURCHASE_EVENT) {
-      urlParams.push('montant=' + encodeUri(data.purchaseAmount ? data.purchaseAmount : eventModel.value));
-      urlParams.push('monnaie=' + encodeUri(data.currency ? data.currency : eventModel.currency));
-      urlParams.push(data.newCustomer !== undefined ? 'newcustomer=' + data.newCustomer : '');
-      urlParams.push(data.attrib !== undefined ? 'attrib=' + encodeUri(data.attrib) : '');
-      urlParams.push(
-        data.voucher !== undefined || eventModel.coupon !== undefined ?
-          'voucher=' + encodeUri(data.voucher !== undefined ? data.voucher : eventModel.coupon) :
-          ''
-      );
-    }
-
-    const includedRef = [];
-    for (let key in data.refTable) {
-      const row = data.refTable[key];
-      if (includedRef.indexOf(row.ref) !== -1) {
-        continue;
-      }
-
-      if (row.value === undefined) {
-        continue;
-      }
-
-      includedRef.push(row.ref);
-      urlParams.push(row.ref + '=' + encodeUri(row.value));
-    }
-
-    const urlParamsString = urlParams.filter((v) => v).join('&');
-
-    if (data.clearCookie) {
-      setCookie('effi', '', {
-        domain: 'auto',
-        path: '/',
-        secure: true,
-        httpOnly: false,
-        'max-age': 10
-      }, false);
-    }
-    
-    const path = eventModel.event_name === PURCHASE_EVENT ? 'effi.revenuemobile' : 'effi.leadmobile';
-
-    const requestHeaders = { method: 'GET' };
-    const url = 'https://track.effiliation.com/servlet/' + path + '?' + urlParamsString;
-    sendHttpRequest(url, (statusCode, headers, body) => {
-      if (statusCode >= 200 && statusCode < 300) {
         data.gtmOnSuccess();
-      } else {
-        data.gtmOnFailure();
-      }
-    }, requestHeaders, '');
-    break;
-  default:
-    data.gtmOnSuccess();
-    break;
+        break;
+    }
+    case PURCHASE_EVENT:
+    case GENERATE_LEAD_EVENT: {
+
+        const effiFromTag    = data.effiCookie;
+        const effiFromCookie = getCookieValues('effi')[0] || '';
+
+        let effiCookieRaw = (effiFromTag != null && effiFromTag !== '') ? effiFromTag : effiFromCookie;
+
+        if (effiCookieRaw) {
+            const effiCookieDecoded = decodeUriComponent(effiCookieRaw);
+            effiCookieRaw = effiCookieDecoded !== undefined ? effiCookieDecoded : effiCookieRaw;
+        }
+
+        const parts         = effiCookieRaw.split(';');
+        const editorId      = parts[0] || null;
+        const subId1        = parts[1] || null;
+        const subId2        = parts[2] || null;
+        const effiProductId = parts[3] || null;
+
+        const urlParams = [
+            'id=' + data.customerId,
+            editorId      ? 'id_compteur=' + encodeUri(editorId) : '',
+            subId1        ? 'effi_id='     + encodeUri(subId1) : '',
+            subId2        ? 'effi_id2='    + encodeUri(subId2) : '',
+            effiProductId ? 'prod_id='     + encodeUri(effiProductId) : '',
+            'ref=' + encodeUri(data.transactionId !== undefined ? data.transactionId : eventModel.transaction_id),
+            data.consentPerformance !== undefined ? 'consent_performance=' + encodeUri(data.consentPerformance) : '',
+        ];
+
+        if (eventModel.event_name === PURCHASE_EVENT) {
+            urlParams.push('montant=' + encodeUri(data.purchaseAmount ? data.purchaseAmount : eventModel.value));
+            urlParams.push('monnaie=' + encodeUri(data.currency ? data.currency : eventModel.currency));
+            urlParams.push(data.newCustomer !== undefined ? 'newcustomer=' + encodeUri(data.newCustomer) : '');
+            urlParams.push(data.attrib !== undefined ? 'attrib=' + encodeUri(data.attrib) : '');
+            urlParams.push(
+                data.voucher !== undefined || eventModel.coupon !== undefined ?
+                'voucher=' + encodeUri(data.voucher !== undefined ? data.voucher : eventModel.coupon) :
+                ''
+            );
+        }
+
+        const includedRef = [];
+        for (let key in data.refTable) {
+            const row = data.refTable[key];
+            if (includedRef.indexOf(row.ref) !== -1) {
+                continue;
+            }
+
+            if (row.value === undefined) {
+                continue;
+            }
+
+            includedRef.push(row.ref);
+            urlParams.push(row.ref + '=' + encodeUri(row.value));
+        }
+
+        const urlParamsString = urlParams.filter((v) => v).join('&');
+
+        if (data.clearCookie) {
+            setCookie('effi', '', {
+                domain: 'auto',
+                path: '/',
+                secure: true,
+                httpOnly: false,
+                sameSite: 'None',
+                'max-age': 10
+            }, false);
+        }
+
+        const path = eventModel.event_name === PURCHASE_EVENT ? 'effi.revenuemobile' : 'effi.leadmobile';
+
+        const requestHeaders = {
+            method: 'GET'
+        };
+        const url = 'https://track.effiliation.com/servlet/' + path + '?' + urlParamsString;
+        sendHttpRequest(url, (statusCode, headers, body) => {
+            if (statusCode >= 200 && statusCode < 300) {
+                data.gtmOnSuccess();
+            } else {
+                data.gtmOnFailure();
+            }
+        }, requestHeaders, '');
+        break;
+    }
+    default:
+        data.gtmOnSuccess();
+        break;
 }
 
 
@@ -573,4 +605,5 @@ scenarios: []
 ___NOTES___
 
 Created on 2/15/2022, 16:06:45
+
 
