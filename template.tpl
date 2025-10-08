@@ -17,7 +17,7 @@ ___INFO___
     "AFFILIATE_MARKETING",
     "ADVERTISING"
   ],
-  "displayName": "Effinity",
+  "displayName": "Effinity by Addingwell",
   "brand": {
     "id": "brand_dummy",
     "displayName": "Addingwell",
@@ -55,7 +55,7 @@ ___TEMPLATE_PARAMETERS___
   {
     "type": "GROUP",
     "name": "standardParameters",
-    "displayName": "Overwrite Standard Parameters",
+    "displayName": "Standard Parameters Override",
     "groupStyle": "ZIPPY_CLOSED",
     "subParams": [
       {
@@ -83,6 +83,12 @@ ___TEMPLATE_PARAMETERS___
       },
       {
         "type": "TEXT",
+        "name": "payment",
+        "displayName": "Payment",
+        "simpleValueType": true
+      },
+      {
+        "type": "TEXT",
         "name": "voucher",
         "displayName": "Voucher",
         "simpleValueType": true
@@ -106,7 +112,105 @@ ___TEMPLATE_PARAMETERS___
         "name": "attrib",
         "displayName": "Attribution",
         "simpleValueType": true,
-        "help": "1 when Effinity is the last touchpoint, 2 when Effinity intervened but isn't last, 0 if Effinity didn't intervene."
+        "help": "1 when Effinity is the last touchpoint, 2 when Effinity intervened but isn\u0027t last, 0 if Effinity didn\u0027t intervene."
+      }
+    ]
+  },
+  {
+    "type": "GROUP",
+    "name": "itemDataListGroup",
+    "displayName": "Items Data Override",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "itemDataList",
+        "displayName": "Update default Item field",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "item_id",
+            "displayName": "Property Name",
+            "name": "name",
+            "type": "SELECT",
+            "selectItems": [
+              {
+                "value": "item_id",
+                "displayValue": "item_id"
+              },
+              {
+                "value": "quantity",
+                "displayValue": "quantity"
+              },
+              {
+                "value": "price",
+                "displayValue": "price"
+              },
+              {
+                "value": "item_name",
+                "displayValue": "item_name"
+              }
+            ],
+            "isUnique": true,
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Property Field",
+            "name": "field",
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          }
+        ],
+        "newRowButtonText": "New Property"
+      }
+    ]
+  },
+  {
+    "type": "GROUP",
+    "name": "eventNamesGroup",
+    "displayName": "Events Names Override",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "TEXT",
+        "name": "pageViewEvent",
+        "displayName": "Page view event name",
+        "simpleValueType": true,
+        "defaultValue": "page_view"
+      },
+      {
+        "type": "TEXT",
+        "name": "purchaseEvent",
+        "displayName": "Purchase event name",
+        "simpleValueType": true,
+        "defaultValue": "purchase"
+      },
+      {
+        "type": "TEXT",
+        "name": "leadEvent",
+        "displayName": "Lead event name",
+        "simpleValueType": true,
+        "defaultValue": "generate_lead"
+      },
+      {
+        "type": "TEXT",
+        "name": "cookieExpiration",
+        "displayName": "Cookie expiration in days",
+        "simpleValueType": true,
+        "defaultValue": 30,
+        "valueValidators": [
+          {
+            "type": "POSITIVE_NUMBER"
+          }
+        ]
       }
     ]
   },
@@ -216,47 +320,6 @@ ___TEMPLATE_PARAMETERS___
         "valueValidators": []
       }
     ]
-  },
-  {
-    "type": "GROUP",
-    "name": "advancedParameters",
-    "displayName": "Advanced Parameters",
-    "groupStyle": "ZIPPY_CLOSED",
-    "subParams": [
-      {
-        "type": "TEXT",
-        "name": "pageViewEvent",
-        "displayName": "Page view event name",
-        "simpleValueType": true,
-        "defaultValue": "page_view"
-      },
-      {
-        "type": "TEXT",
-        "name": "purchaseEvent",
-        "displayName": "Purchase event name",
-        "simpleValueType": true,
-        "defaultValue": "purchase"
-      },
-      {
-        "type": "TEXT",
-        "name": "leadEvent",
-        "displayName": "Lead event name",
-        "simpleValueType": true,
-        "defaultValue": "generate_lead"
-      },
-      {
-        "type": "TEXT",
-        "name": "cookieExpiration",
-        "displayName": "Cookie expiration in days",
-        "simpleValueType": true,
-        "defaultValue": 30,
-        "valueValidators": [
-          {
-            "type": "POSITIVE_NUMBER"
-          }
-        ]
-      }
-    ]
   }
 ]
 
@@ -269,6 +332,7 @@ const setCookie = require('setCookie');
 const getCookieValues = require('getCookieValues');
 const parseUrl = require('parseUrl');
 const encodeUriComponent = require('encodeUriComponent');
+const JSON = require('JSON');
 
 const eventModel = getAllEventData();
 
@@ -280,6 +344,47 @@ const GENERATE_LEAD_EVENT = data.leadEvent;
 function encodeUri(value) {
   value = value || '';
   return encodeUriComponent(value);
+}
+
+function getCartDetail() {
+  
+  let cartDetail;
+  
+  if(eventModel.items && eventModel.items.length > 0) {
+     cartDetail = [];
+     eventModel.items.forEach(item => {
+      cartDetail.push({
+        id: item[getItemField('item_id')],
+        price: item[getItemField('price')],
+        quantity: item[getItemField('quantity')],
+        nom: item[getItemField('item_name')]
+      });
+    });
+  }
+
+  return cartDetail ? JSON.stringify(cartDetail) : undefined;
+  
+}
+
+function getItemField(defaultField) {
+  let result = defaultField;
+
+  const map = {
+    item_id: 'item_id',
+    price: 'price',
+    quantity: 'quantity',
+    item_name: 'item_name'
+  };
+
+  if (data.itemDataList) {
+    data.itemDataList.forEach(d => {
+      if (map[defaultField] === d.name) {
+        result = d.field;
+      }
+    });
+  }
+
+  return result;
 }
 
 switch (eventModel.event_name) {
@@ -344,9 +449,13 @@ switch (eventModel.event_name) {
       
       'ref=' + encodeUri(data.transactionId !== undefined ? data.transactionId : eventModel.transaction_id),
       data.consentPerformance !== undefined ? 'consent_performance=' + encodeUri(data.consentPerformance) : '',
+      'origin=addignwell'
     ];
 
     if (eventModel.event_name === PURCHASE_EVENT) {
+      
+      const cartDetail = getCartDetail();
+      
       urlParams.push('montant=' + encodeUri(data.purchaseAmount ? data.purchaseAmount : eventModel.value));
       urlParams.push('monnaie=' + encodeUri(data.currency ? data.currency : eventModel.currency));
       urlParams.push(data.newCustomer !== undefined ? 'newcustomer=' + data.newCustomer : '');
@@ -356,6 +465,15 @@ switch (eventModel.event_name) {
           'voucher=' + encodeUri(data.voucher !== undefined ? data.voucher : eventModel.coupon) :
           ''
       );
+      
+      if(data.payment || eventModel.payment_type) {
+        urlParams.push('payment=' + encodeUri(data.payment || eventModel.payment_type));
+      }
+      
+      if(cartDetail) {
+        urlParams.push('cartdetail=' + encodeUri(cartDetail));
+      }
+      
     }
 
     const includedRef = [];
@@ -387,7 +505,6 @@ switch (eventModel.event_name) {
     
     const path = eventModel.event_name === PURCHASE_EVENT ? 'effi.revenuemobile' : 'effi.leadmobile';
 
-    const requestHeaders = { method: 'GET' };
     const url = 'https://track.effiliation.com/servlet/' + path + '?' + urlParamsString;
     sendHttpRequest(url, (statusCode, headers, body) => {
       if (statusCode >= 200 && statusCode < 300) {
@@ -395,7 +512,7 @@ switch (eventModel.event_name) {
       } else {
         data.gtmOnFailure();
       }
-    }, requestHeaders, '');
+    }, { method: 'GET' });
     break;
   default:
     data.gtmOnSuccess();
@@ -573,4 +690,5 @@ scenarios: []
 ___NOTES___
 
 Created on 2/15/2022, 16:06:45
+
 
